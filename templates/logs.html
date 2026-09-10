@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Logs{% endblock %}
+{% block page_title %}Logs de Atualização{% endblock %}
+
+{% block content %}
+<style>
+  .logs-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    padding: 24px;
+  }
+  
+  .logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  
+  .logs-table th {
+    background: #1a3a5c;
+    color: #fff;
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+  }
+  
+  .logs-table th:first-child { border-top-left-radius: 8px; }
+  .logs-table th:last-child { border-top-right-radius: 8px; }
+  
+  .logs-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+  
+  .logs-table tr:hover td {
+    background: #f8fafc;
+  }
+  
+  .badge-acao {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .badge-acao.importacao { background: #dbeafe; color: #1e40af; }
+  .badge-acao.edicao { background: #fef3c7; color: #92400e; }
+  
+  .data-col { white-space: nowrap; font-weight: 600; color: #475569; }
+  .user-col { font-weight: 600; color: #1a3a5c; }
+  .detalhes-col { color: #334155; line-height: 1.4; }
+  
+  .empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #64748b;
+  }
+</style>
+
+<div class="logs-container">
+  {% if logs %}
+  <table class="logs-table">
+    <thead>
+      <tr>
+        <th>Data e Hora</th>
+        <th>Usuário</th>
+        <th>Ação</th>
+        <th>Detalhes / Campos Editados</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td class="data-col">
+          {% if log.data_hora %}
+            {{ log.data_hora.replace('T', ' ')[:16] }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td class="user-col">👤 {{ log.usuario }}</td>
+        <td>
+          <span class="badge-acao {{ 'importacao' if 'Importação' in log.acao else 'edicao' }}">
+            {{ log.acao }}
+          </span>
+        </td>
+        <td class="detalhes-col">{{ log.detalhes }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <h3>Nenhum registro encontrado</h3>
+    <p>As alterações feitas no portal aparecerão aqui.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

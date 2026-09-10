@@ -337,6 +337,8 @@
   <button class="btn btn-success" onclick="salvar()">💾 Salvar no Banco</button>
   <button class="btn btn-purple" onclick="gerarRelatorio()">📄 Relatório PDF</button>
   <button class="btn btn-primary" onclick="abrirModalEmail()">📧 Enviar por E-mail</button>
+  <button class="btn btn-secondary" onclick="document.getElementById('file-import').click()">📥 Importar Planilha</button>
+  <input type="file" id="file-import" accept=".xlsx" style="display:none" onchange="importarPlanilha(this)">
   <div class="spacer"></div>
   <div class="file-info">
     🗄️ <strong id="nome-banco">engemat_cotas.db</strong>
@@ -676,15 +678,18 @@
   //  SALVAR
   // ═══════════════════════════════════════════════════
   function salvar() {
+    var nome = prompt("Por favor, informe seu NOME para registrar essa alteração nos Logs:");
+    if (!nome) return; // Se cancelar ou deixar vazio, não salva
+
     fetch('/api/salvar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ obras: obras })
+      body: JSON.stringify({ usuario: nome, obras: obras })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.ok || data.success) {
-        alterado = false;
+        haAlteracoesNaoSalvas = false;
         toast('Dados salvos com sucesso! ✅', 'success');
         if (data.atualizado) {
           document.getElementById('data-atualizacao').textContent = data.atualizado;
@@ -696,6 +701,52 @@
     .catch(function(err) {
       console.error(err);
       toast('Erro de conexão ao salvar.', 'error');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  IMPORTAÇÃO DE PLANILHA EXCEL
+  // ═══════════════════════════════════════════════════
+  function importarPlanilha(input) {
+    if (!input.files || input.files.length === 0) return;
+    var file = input.files[0];
+
+    var alerta = "⚠️ ATENÇÃO!\n\nImportar esta planilha irá SOBREPOR TODOS OS DADOS ATUAIS do sistema.\nUma vez feito, não poderá ser desfeito.\n\nDeseja realmente continuar?";
+    if (!confirm(alerta)) {
+      input.value = "";
+      return;
+    }
+
+    var nome = prompt("Por favor, informe seu NOME para registrar essa importação nos Logs:");
+    if (!nome) {
+      input.value = "";
+      return;
+    }
+
+    toast('Enviando planilha, aguarde... ⏳', 'info');
+
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('usuario', nome);
+
+    fetch('/api/importar', {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        toast('Planilha importada com sucesso! Atualizando tela... ✅', 'success');
+        setTimeout(function() { window.location.reload(); }, 1500);
+      } else {
+        toast('Erro ao importar: ' + (data.erro || 'desconhecido'), 'error');
+        input.value = "";
+      }
+    })
+    .catch(function(err) {
+      console.error(err);
+      toast('Erro de conexão ao importar.', 'error');
+      input.value = "";
     });
   }
 

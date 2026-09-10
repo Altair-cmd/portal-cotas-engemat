@@ -259,11 +259,85 @@ def relatorio():
     return render_template('relatorio.html')
 
 
+@app.route('/logs')
+@login_required
+def logs():
+    response = supabase.table('logs').select('*').order('data_hora', desc=True).limit(100).execute()
+    return render_template('logs.html', logs=response.data)
+
 # ─── Rotas de API ─────────────────────────────────────────────────────────────
 @app.route('/api/obras', methods=['GET'])
 @login_required
 def api_obras():
     return jsonify(fetch_obras())
+
+@app.route('/api/importar', methods=['POST'])
+@login_required
+def api_importar():
+    try:
+        usuario = request.form.get('usuario', 'Usuário Desconhecido')
+        if 'file' not in request.files:
+            return jsonify({"ok": False, "erro": "Nenhum arquivo enviado."})
+        
+        file = request.files['file']
+        import openpyxl
+        wb = openpyxl.load_workbook(file, data_only=True)
+        if "RESUMO" not in wb.sheetnames:
+            return jsonify({"ok": False, "erro": "Aba 'RESUMO' não encontrada."})
+            
+        ws = wb["RESUMO"]
+        obras_clean = []
+        for row in ws.iter_rows(min_row=4, values_only=True):
+            cc = row[2]
+            if not cc: continue
+            nec_apr = int(_num(row[7]))
+            atual_apr = int(_num(row[8]))
+            nec_pcd = int(_num(row[11]))
+            atual_pcd = int(_num(row[12]))
+            def_apr = atual_apr - nec_apr
+            def_pcd = atual_pcd - nec_pcd
+            
+            def status(d, nec):
+                if nec == 0: return "Dentro da cota"
+                if d < 0: return "Abaixo da cota"
+                if d > 0: return "Acima da cota"
+                return "Dentro da cota"
+                
+            obras_clean.append({
+                "tipo": str(row[0] or "").strip(),
+                "cnpj": str(row[1] or "").strip(),
+                "obra": str(cc).strip(),
+                "emp_sienge": str(row[3] or "").strip(),
+                "emp_dom": str(row[4] or "").strip(),
+                "cc_dom": str(row[5] or "").strip(),
+                "qtd_func": int(_num(row[6])),
+                "nec_apr": nec_apr,
+                "atual_apr": atual_apr,
+                "def_apr": def_apr,
+                "status_apr": status(def_apr, nec_apr),
+                "nec_pcd": nec_pcd,
+                "atual_pcd": atual_pcd,
+                "def_pcd": def_pcd,
+                "status_pcd": status(def_pcd, nec_pcd),
+                "atualizado_em": datetime.datetime.now().isoformat()
+            })
+            
+        # Salvar Log
+        supabase.table('logs').insert({
+            "usuario": usuario,
+            "acao": "Importação de Planilha",
+            "detalhes": f"Importou arquivo {file.filename} sobrescrevendo todos os dados ({len(obras_clean)} obras)."
+        }).execute()
+        
+        # Deletar tudo e inserir
+        supabase.table('obras').delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        BATCH = 50
+        for i in range(0, len(obras_clean), BATCH):
+            supabase.table('obras').insert(obras_clean[i:i+BATCH]).execute()
+            
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)})
 
 
 @app.route('/api/salvar', methods=['POST'])
@@ -272,7 +346,46 @@ def api_salvar():
     try:
         dados = request.get_json()
         obras_raw = dados.get('obras', [])
+        usuario = dados.get('usuario', 'Usuário Desconhecido')
         obras_clean = [clean_obra(o) for o in obras_raw]
+        
+        # --- Lógica de Auditoria (Logs) ---
+        old_obras = fetch_obras()
+        old_dict = {o['obra']: o for o in old_obras}
+        alteracoes = []
+
+        for new_o in obras_clean:
+            obra_nome = new_o['obra']
+            if obra_nome in old_dict:
+                old_o = old_dict[obra_nome]
+                campos = []
+                if str(new_o['tipo']) != str(old_o.get('tipo', '')): campos.append('Tipo')
+                if int(new_o['qtd_func']) != int(_num(old_o.get('qtd_func'))): campos.append('Funcionários')
+                if int(new_o['nec_apr']) != int(_num(old_o.get('nec_apr'))): campos.append('Nec. Apr')
+                if int(new_o['atual_apr']) != int(_num(old_o.get('atual_apr'))): campos.append('Atual Apr')
+                if int(new_o['nec_pcd']) != int(_num(old_o.get('nec_pcd'))): campos.append('Nec. PCD')
+                if int(new_o['atual_pcd']) != int(_num(old_o.get('atual_pcd'))): campos.append('Atual PCD')
+                
+                if campos:
+                    alteracoes.append(f"{obra_nome} ({', '.join(campos)})")
+            else:
+                alteracoes.append(f"{obra_nome} (Nova Obra)")
+
+        new_dict = {o['obra']: o for o in obras_clean}
+        for old_nome in old_dict:
+            if old_nome not in new_dict:
+                alteracoes.append(f"{old_nome} (Excluída)")
+
+        detalhes_log = "Clicou em salvar sem nenhuma alteração nos dados."
+        if alteracoes:
+            detalhes_log = "Editou: " + "; ".join(alteracoes)
+
+        supabase.table('logs').insert({
+            "usuario": usuario,
+            "acao": "Edição Manual",
+            "detalhes": detalhes_log
+        }).execute()
+        # ----------------------------------
         
         # Deletar tudo
         supabase.table('obras').delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
