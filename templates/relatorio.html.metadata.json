@@ -1,0 +1,5 @@
+{
+  "summary": "Template do relatório editável do Portal de Cotas. Inclui: barra de ações (salvar, PDF, e-mail), filtros dinâmicos, tabela editável com cálculo em tempo real de déficit/status, cards de resumo, modal de e-mail, toasts e controle de alterações não salvas (beforeunload). Consome e grava dados via REST API Flask.",
+  "updatedAt": "2026-09-10T20:17:40.324014200Z",
+  "userFacing": true
+}

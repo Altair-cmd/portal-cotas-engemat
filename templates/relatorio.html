@@ -1,0 +1,821 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório{% endblock %}
+{% block page_title %}📋 Relatório de Cotas{% endblock %}
+
+{% block content %}
+
+<style>
+  /* ── Action Bar ── */
+  .action-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 14px 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  }
+
+  .action-bar .spacer { flex: 1; }
+
+  .file-info {
+    font-size: 0.8rem;
+    color: #7a90aa;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .file-info strong { color: #1a3a5c; }
+
+  /* ── Summary Cards ── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .sum-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+    text-align: center;
+  }
+
+  .sum-card .sum-label {
+    font-size: 0.72rem;
+    color: #7a90aa;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .sum-card .sum-val {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #1a3a5c;
+  }
+
+  .sum-card.pend .sum-val { color: #c0392b; }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 18px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+  }
+
+  .filter-bar input[type=text],
+  .filter-bar select {
+    padding: 8px 12px;
+    border: 1.5px solid #d0dce8;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #1e2d3d;
+    background: #f7fafc;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .filter-bar input[type=text]:focus,
+  .filter-bar select:focus {
+    border-color: #1a3a5c;
+    background: #fff;
+  }
+
+  .filter-bar input[type=text] { width: 200px; }
+  .filter-bar .spacer { flex: 1; }
+
+  /* ── Table Card ── */
+  .table-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .obras-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    min-width: 1050px;
+  }
+
+  .obras-table thead th {
+    background: #1a3a5c;
+    color: #fff;
+    padding: 11px 10px;
+    text-align: left;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+
+  .obras-table tbody tr.linha-obra {
+    border-bottom: 1px solid #f0f4f8;
+    transition: background 0.1s;
+  }
+
+  .obras-table tbody tr.linha-obra:hover { background: #f8fafc; }
+  .obras-table tbody tr.linha-obra.hidden { display: none; }
+
+  .obras-table td { padding: 7px 8px; vertical-align: middle; }
+
+  .obras-table input.cell-input {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1.5px solid transparent;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.84rem;
+    background: transparent;
+    color: #1e2d3d;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .obras-table input.cell-input:focus {
+    border-color: #1a3a5c;
+    background: #f0f6ff;
+    outline: none;
+  }
+
+  .obras-table input.cell-input[type=number] { width: 72px; text-align: center; }
+
+  .cell-ro {
+    text-align: center;
+    font-weight: 600;
+    color: #555;
+    min-width: 46px;
+  }
+
+  .cell-ro.negativo { color: #c0392b; }
+  .cell-ro.positivo { color: #18794e; }
+  .cell-ro.zero     { color: #d97706; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .badge-danger  { background: #fee2e2; color: #c0392b; }
+  .badge-warning { background: #fef3c7; color: #d97706; }
+  .badge-success { background: #d1fae5; color: #18794e; }
+
+  .btn-del {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #c0392b;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+    padding: 4px;
+    border-radius: 6px;
+  }
+
+  .btn-del:hover { opacity: 1; background: #fff0f0; }
+
+  /* ── Modal E-mail ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 32px 36px;
+    width: 440px;
+    max-width: 94vw;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+    animation: popIn 0.18s ease;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+
+  .modal-box h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1a3a5c;
+    margin-bottom: 20px;
+  }
+
+  .modal-field {
+    margin-bottom: 14px;
+  }
+
+  .modal-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4a6080;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 5px;
+  }
+
+  .modal-field input {
+    width: 100%;
+    padding: 10px 13px;
+    border: 1.5px solid #d0dce8;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #1a3a5c;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .modal-field input:focus {
+    border-color: #1a3a5c;
+    box-shadow: 0 0 0 3px rgba(26,58,92,0.10);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 22px;
+  }
+
+  /* ── Toast ── */
+  #toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: #1a3a5c;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    animation: slideUp 0.22s ease;
+    max-width: 320px;
+  }
+
+  .toast.success { background: #18794e; }
+  .toast.error   { background: #c0392b; }
+  .toast.info    { background: #1a3a5c; }
+
+  @keyframes slideUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    font-family: inherit;
+    font-size: 0.87rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn:active { transform: scale(0.97); }
+  .btn-success  { background: #18794e; color: #fff; }
+  .btn-purple   { background: #6f42c1; color: #fff; }
+  .btn-primary  { background: #1a3a5c; color: #fff; }
+  .btn-secondary{ background: #e2e8f0; color: #2d3748; }
+  .btn-nova     { background: #e8f0fe; color: #1a3a5c; }
+
+  @media (max-width: 900px) {
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<!-- ═══════════ ACTION BAR ═══════════ -->
+<div class="action-bar">
+  <button class="btn btn-success" onclick="salvar()">💾 Salvar no Banco</button>
+  <button class="btn btn-purple" onclick="gerarRelatorio()">📄 Relatório PDF</button>
+  <button class="btn btn-primary" onclick="abrirModalEmail()">📧 Enviar por E-mail</button>
+  <div class="spacer"></div>
+  <div class="file-info">
+    🗄️ <strong id="nome-banco">engemat_cotas.db</strong>
+    &nbsp;·&nbsp; ⏰ Atualizado: <strong id="data-atualizacao">—</strong>
+  </div>
+</div>
+
+<!-- ═══════════ SUMMARY CARDS ═══════════ -->
+<div class="summary-row">
+  <div class="sum-card">
+    <div class="sum-label">Obras</div>
+    <div class="sum-val" id="card-obras">0</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-label">Funcionários</div>
+    <div class="sum-val" id="card-func">0</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-label">Apr. Ativos</div>
+    <div class="sum-val" id="card-apr">0</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-label">PCDs Ativos</div>
+    <div class="sum-val" id="card-pcd">0</div>
+  </div>
+  <div class="sum-card pend">
+    <div class="sum-label">Pendências</div>
+    <div class="sum-val" id="card-pend">0</div>
+  </div>
+</div>
+
+<!-- ═══════════ FILTER BAR ═══════════ -->
+<div class="filter-bar">
+  <input type="text" id="f-busca" placeholder="🔍 Buscar obra..." oninput="filtrar()" />
+  <select id="f-tipo" onchange="filtrar()">
+    <option value="">Todos os tipos</option>
+  </select>
+  <select id="f-status-apr" onchange="filtrar()">
+    <option value="">Status Aprendiz</option>
+    <option value="Abaixo">Abaixo</option>
+    <option value="Dentro">Dentro</option>
+    <option value="Acima">Acima</option>
+  </select>
+  <select id="f-status-pcd" onchange="filtrar()">
+    <option value="">Status PCD</option>
+    <option value="Abaixo">Abaixo</option>
+    <option value="Dentro">Dentro</option>
+    <option value="Acima">Acima</option>
+  </select>
+  <button class="btn btn-secondary" onclick="limparFiltros()">✖ Limpar</button>
+  <div class="spacer"></div>
+  <button class="btn btn-nova" onclick="adicionarObra()">➕ Nova Obra</button>
+</div>
+
+<!-- ═══════════ TABLE ═══════════ -->
+<div class="table-card">
+  <div class="table-wrapper">
+    <table class="obras-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Obra</th>
+          <th>Tipo</th>
+          <th>Func.</th>
+          <th>Nec. Apr.</th>
+          <th>Atu. Apr.</th>
+          <th>Déf. Apr.</th>
+          <th>Status Apr.</th>
+          <th>Nec. PCD</th>
+          <th>Atu. PCD</th>
+          <th>Déf. PCD</th>
+          <th>Status PCD</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="obras-tbody">
+        <tr>
+          <td colspan="13" style="text-align:center;padding:40px;color:#aaa">
+            Carregando dados... ⏳
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL E-MAIL ═══════════ -->
+<div class="modal-overlay" id="modal-email" onclick="fecharModalEmail(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3>📧 Enviar Relatório por E-mail</h3>
+
+    <div class="modal-field">
+      <label>Destinatário</label>
+      <input type="email" id="email-para" placeholder="destinatario@email.com" required />
+    </div>
+    <div class="modal-field">
+      <label>Assunto</label>
+      <input type="text" id="email-assunto" value="Relatório de Cotas – ENGEMAT" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="fecharModalEmail()">Cancelar</button>
+      <button class="btn btn-primary" onclick="enviarEmail()">📨 Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TOASTS ═══════════ -->
+<div id="toast-container"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ═══════════════════════════════════════════════════
+  //  ESTADO GLOBAL
+  // ═══════════════════════════════════════════════════
+  var obras = [];
+  var alterado = false;
+
+  // Aviso antes de sair com alterações não salvas
+  window.addEventListener('beforeunload', function(e) {
+    if (alterado) {
+      e.preventDefault();
+      e.returnValue = 'Você tem alterações não salvas. Deseja sair mesmo assim?';
+    }
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  INIT – Carregar obras da API
+  // ═══════════════════════════════════════════════════
+  document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/obras')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        obras = data.obras || data || [];
+        // Preencher data de atualização
+        if (data.atualizado) {
+          document.getElementById('data-atualizacao').textContent = data.atualizado;
+        }
+        if (data.banco) {
+          document.getElementById('nome-banco').textContent = data.banco;
+        }
+        popularFiltroTipo();
+        renderizar();
+      })
+      .catch(function(err) {
+        console.error('Erro ao carregar obras:', err);
+        toast('Erro ao carregar dados da API', 'error');
+        document.getElementById('obras-tbody').innerHTML =
+          '<tr><td colspan="13" style="text-align:center;padding:40px;color:#c0392b">Erro ao carregar dados.</td></tr>';
+      });
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  RENDERIZAR TABELA
+  // ═══════════════════════════════════════════════════
+  function renderizar() {
+    var tbody = document.getElementById('obras-tbody');
+    tbody.innerHTML = '';
+
+    if (obras.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;color:#aaa">Nenhuma obra cadastrada.</td></tr>';
+      atualizarCards();
+      return;
+    }
+
+    obras.forEach(function(obra, idx) {
+      obra._idx = idx;
+      tbody.insertAdjacentHTML('beforeend', criarLinha(obra, idx));
+    });
+
+    filtrar();
+    atualizarCards();
+  }
+
+  function criarLinha(obra, idx) {
+    var defApr = (obra.atual_apr || 0) - (obra.nec_apr || 0);
+    var defPcd = (obra.atual_pcd || 0) - (obra.nec_pcd || 0);
+    var stApr  = statusLabel(defApr);
+    var stPcd  = statusLabel(defPcd);
+
+    return '<tr class="linha-obra" data-idx="' + idx + '">' +
+      '<td style="color:#aaa;font-size:0.78rem;padding-left:12px">' + (idx + 1) + '</td>' +
+      '<td><input class="cell-input" type="text" value="' + esc(obra.obra) + '" oninput="setField(' + idx + ',\'obra\',this.value)" /></td>' +
+      '<td><input class="cell-input" type="text" value="' + esc(obra.tipo) + '" oninput="setField(' + idx + ',\'tipo\',this.value)" /></td>' +
+      '<td><input class="cell-input" type="number" min="0" value="' + (obra.qtd_func||0) + '" oninput="setField(' + idx + ',\'qtd_func\',+this.value);recalcular(' + idx + ')" /></td>' +
+      '<td><input class="cell-input" type="number" min="0" value="' + (obra.nec_apr||0) + '" oninput="setField(' + idx + ',\'nec_apr\',+this.value);recalcular(' + idx + ')" /></td>' +
+      '<td><input class="cell-input" type="number" min="0" value="' + (obra.atual_apr||0) + '" oninput="setField(' + idx + ',\'atual_apr\',+this.value);recalcular(' + idx + ')" /></td>' +
+      '<td><div class="cell-ro ' + classDef(defApr) + '" id="def-apr-' + idx + '">' + defApr + '</div></td>' +
+      '<td><div id="st-apr-' + idx + '">' + badgeHtml(stApr) + '</div></td>' +
+      '<td><input class="cell-input" type="number" min="0" value="' + (obra.nec_pcd||0) + '" oninput="setField(' + idx + ',\'nec_pcd\',+this.value);recalcular(' + idx + ')" /></td>' +
+      '<td><input class="cell-input" type="number" min="0" value="' + (obra.atual_pcd||0) + '" oninput="setField(' + idx + ',\'atual_pcd\',+this.value);recalcular(' + idx + ')" /></td>' +
+      '<td><div class="cell-ro ' + classDef(defPcd) + '" id="def-pcd-' + idx + '">' + defPcd + '</div></td>' +
+      '<td><div id="st-pcd-' + idx + '">' + badgeHtml(stPcd) + '</div></td>' +
+      '<td><button class="btn-del" title="Excluir" onclick="excluirObra(' + idx + ')">🗑️</button></td>' +
+    '</tr>';
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  RECALCULAR (tempo real)
+  // ═══════════════════════════════════════════════════
+  function recalcular(idx) {
+    var o = obras[idx];
+    if (!o) return;
+
+    var defApr = (o.atual_apr || 0) - (o.nec_apr || 0);
+    var defPcd = (o.atual_pcd || 0) - (o.nec_pcd || 0);
+    o.def_apr = defApr;
+    o.def_pcd = defPcd;
+
+    var elDA = document.getElementById('def-apr-' + idx);
+    var elDP = document.getElementById('def-pcd-' + idx);
+    var elSA = document.getElementById('st-apr-' + idx);
+    var elSP = document.getElementById('st-pcd-' + idx);
+
+    if (elDA) { elDA.textContent = defApr; elDA.className = 'cell-ro ' + classDef(defApr); }
+    if (elDP) { elDP.textContent = defPcd; elDP.className = 'cell-ro ' + classDef(defPcd); }
+    if (elSA) elSA.innerHTML = badgeHtml(statusLabel(defApr));
+    if (elSP) elSP.innerHTML = badgeHtml(statusLabel(defPcd));
+
+    atualizarCards();
+  }
+
+  function setField(idx, campo, valor) {
+    if (obras[idx]) {
+      obras[idx][campo] = valor;
+      alterado = true;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  FILTROS
+  // ═══════════════════════════════════════════════════
+  function popularFiltroTipo() {
+    var tipos = [...new Set(obras.map(function(o) { return o.tipo || ''; }).filter(Boolean))].sort();
+    var sel = document.getElementById('f-tipo');
+    tipos.forEach(function(t) {
+      sel.insertAdjacentHTML('beforeend', '<option value="' + esc(t) + '">' + esc(t) + '</option>');
+    });
+  }
+
+  function filtrar() {
+    var busca    = document.getElementById('f-busca').value.toLowerCase();
+    var tipo     = document.getElementById('f-tipo').value.toLowerCase();
+    var stAprF   = document.getElementById('f-status-apr').value.toLowerCase();
+    var stPcdF   = document.getElementById('f-status-pcd').value.toLowerCase();
+
+    document.querySelectorAll('.linha-obra').forEach(function(row) {
+      var idx = parseInt(row.dataset.idx, 10);
+      var o   = obras[idx];
+      if (!o) { row.classList.add('hidden'); return; }
+
+      var defApr = (o.atual_apr || 0) - (o.nec_apr || 0);
+      var defPcd = (o.atual_pcd || 0) - (o.nec_pcd || 0);
+      var stApr  = statusLabel(defApr).toLowerCase();
+      var stPcd  = statusLabel(defPcd).toLowerCase();
+
+      var ok = (!busca  || (o.obra || '').toLowerCase().includes(busca))
+            && (!tipo   || (o.tipo || '').toLowerCase().includes(tipo))
+            && (!stAprF || stApr === stAprF)
+            && (!stPcdF || stPcd === stPcdF);
+
+      row.classList.toggle('hidden', !ok);
+    });
+
+    atualizarCards();
+  }
+
+  function limparFiltros() {
+    document.getElementById('f-busca').value = '';
+    document.getElementById('f-tipo').value = '';
+    document.getElementById('f-status-apr').value = '';
+    document.getElementById('f-status-pcd').value = '';
+    filtrar();
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  CARDS DE RESUMO (obras visíveis)
+  // ═══════════════════════════════════════════════════
+  function atualizarCards() {
+    var visiveis = obrasVisiveis();
+    var nObras = visiveis.length;
+    var nFunc  = visiveis.reduce(function(s, o) { return s + (o.qtd_func || 0); }, 0);
+    var nApr   = visiveis.reduce(function(s, o) { return s + (o.atual_apr || 0); }, 0);
+    var nPcd   = visiveis.reduce(function(s, o) { return s + (o.atual_pcd || 0); }, 0);
+    var nPend  = visiveis.filter(function(o) {
+      return ((o.atual_apr || 0) - (o.nec_apr || 0)) < 0
+          || ((o.atual_pcd || 0) - (o.nec_pcd || 0)) < 0;
+    }).length;
+
+    document.getElementById('card-obras').textContent = nObras;
+    document.getElementById('card-func').textContent  = nFunc;
+    document.getElementById('card-apr').textContent   = nApr;
+    document.getElementById('card-pcd').textContent   = nPcd;
+    document.getElementById('card-pend').textContent  = nPend;
+  }
+
+  function obrasVisiveis() {
+    return obras.filter(function(o, idx) {
+      var row = document.querySelector('.linha-obra[data-idx="' + idx + '"]');
+      return !row || !row.classList.contains('hidden');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  CRUD
+  // ═══════════════════════════════════════════════════
+  function adicionarObra() {
+    var novaObra = {
+      obra: '', tipo: '', qtd_func: 0,
+      nec_apr: 0, atual_apr: 0, def_apr: 0,
+      nec_pcd: 0, atual_pcd: 0, def_pcd: 0
+    };
+    obras.push(novaObra);
+    alterado = true;
+    renderizar();
+    // Focar no campo obra da nova linha
+    var rows = document.querySelectorAll('.linha-obra');
+    if (rows.length) {
+      var lastRow = rows[rows.length - 1];
+      var input = lastRow.querySelector('input');
+      if (input) { input.focus(); input.scrollIntoView({ block: 'center' }); }
+    }
+  }
+
+  function excluirObra(idx) {
+    var nome = (obras[idx] && obras[idx].obra) ? obras[idx].obra : 'esta obra';
+    if (!confirm('Excluir "' + nome + '"?\nEsta ação não pode ser desfeita.')) return;
+    obras.splice(idx, 1);
+    alterado = true;
+    renderizar();
+    toast('Obra excluída.', 'info');
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  SALVAR
+  // ═══════════════════════════════════════════════════
+  function salvar() {
+    fetch('/api/salvar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ obras: obras })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok || data.success) {
+        alterado = false;
+        toast('Dados salvos com sucesso! ✅', 'success');
+        if (data.atualizado) {
+          document.getElementById('data-atualizacao').textContent = data.atualizado;
+        }
+      } else {
+        toast('Erro ao salvar: ' + (data.erro || data.error || 'desconhecido'), 'error');
+      }
+    })
+    .catch(function(err) {
+      console.error(err);
+      toast('Erro de conexão ao salvar.', 'error');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  GERAR RELATÓRIO PDF
+  // ═══════════════════════════════════════════════════
+  function gerarRelatorio() {
+    var visiveis = obrasVisiveis();
+    fetch('/api/preview-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ obras: visiveis })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok || data.success || data.url) {
+        window.open('/relatorio-pdf', '_blank');
+        toast('PDF gerado. Abrindo em nova aba... 📄', 'success');
+      } else {
+        toast('Erro ao gerar PDF: ' + (data.erro || data.error || 'desconhecido'), 'error');
+      }
+    })
+    .catch(function(err) {
+      console.error(err);
+      // Tentar abrir diretamente como fallback
+      window.open('/relatorio-pdf', '_blank');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  MODAL E-MAIL
+  // ═══════════════════════════════════════════════════
+  function abrirModalEmail() {
+    document.getElementById('modal-email').classList.add('open');
+    document.getElementById('email-para').focus();
+  }
+
+  function fecharModalEmail(ev) {
+    if (ev && ev.target !== document.getElementById('modal-email')) return;
+    document.getElementById('modal-email').classList.remove('open');
+  }
+
+  // Fechar modal com ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fecharModalEmail({ target: document.getElementById('modal-email') });
+  });
+
+  function enviarEmail() {
+    var emailPara   = document.getElementById('email-para').value.trim();
+    var emailAssunto = document.getElementById('email-assunto').value.trim();
+
+    if (!emailPara) { toast('Informe o e-mail do destinatário.', 'error'); return; }
+
+    var visiveis = obrasVisiveis();
+
+    fetch('/api/enviar-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailPara, assunto: emailAssunto, obras: visiveis })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok || data.success) {
+        document.getElementById('modal-email').classList.remove('open');
+        toast('E-mail enviado com sucesso para ' + emailPara + '! 📧', 'success');
+      } else {
+        toast('Erro ao enviar: ' + (data.erro || data.error || 'desconhecido'), 'error');
+      }
+    })
+    .catch(function(err) {
+      console.error(err);
+      toast('Erro de conexão ao enviar e-mail.', 'error');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  TOAST
+  // ═══════════════════════════════════════════════════
+  function toast(msg, tipo) {
+    var container = document.getElementById('toast-container');
+    var el = document.createElement('div');
+    el.className = 'toast ' + (tipo || 'info');
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(function() {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(8px)';
+      el.style.transition = 'opacity 0.3s, transform 0.3s';
+      setTimeout(function() { el.remove(); }, 320);
+    }, 3500);
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  HELPERS
+  // ═══════════════════════════════════════════════════
+  function statusLabel(def) {
+    if (def < 0)  return 'Abaixo';
+    if (def === 0) return 'Dentro';
+    return 'Acima';
+  }
+
+  function badgeHtml(label) {
+    var cls = label === 'Abaixo' ? 'badge-danger'
+            : label === 'Dentro' ? 'badge-warning'
+            : 'badge-success';
+    return '<span class="badge ' + cls + '">' + label + '</span>';
+  }
+
+  function classDef(def) {
+    if (def < 0)  return 'negativo';
+    if (def === 0) return 'zero';
+    return 'positivo';
+  }
+
+  function esc(str) {
+    return (str || '').toString()
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+</script>
+{% endblock %}

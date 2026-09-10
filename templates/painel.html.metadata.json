@@ -1,0 +1,5 @@
+{
+  "summary": "Template do painel principal do Portal de Cotas. Exibe 8 cards de KPIs (4 azuis + 4 vermelhos), 2 gráficos Chart.js (Bar + Doughnut) e tabela Top 5 obras com maiores pendências, todos alimentados pelos dados passados pelo Flask (stats, obras).",
+  "updatedAt": "2026-09-10T20:15:51.807405500Z",
+  "userFacing": true
+}

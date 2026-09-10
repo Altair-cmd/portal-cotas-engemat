@@ -1,0 +1,5 @@
+{
+  "summary": "Template base do Portal de Cotas ENGEMAT com sidebar fixa azul (#1a3a5c) de 220px, active state nos links via request.endpoint, topbar sticky com badge do usuário, Chart.js CDN e blocos Jinja2 extensíveis (title, page_title, content, scripts).",
+  "updatedAt": "2026-09-10T20:15:04.022731200Z",
+  "userFacing": true
+}

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Portal{% endblock %} – Portal de Cotas</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      min-height: 100vh;
+      background: #F4F6F9;
+      color: #1e2d3d;
+    }
+
+    /* ═══════════════════ SIDEBAR ═══════════════════ */
+    .sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: #1a3a5c;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .sidebar-brand .brand-icon { font-size: 1.6rem; line-height: 1; }
+
+    .sidebar-brand .brand-text {
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      line-height: 1.3;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 0;
+    }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 20px;
+      color: rgba(255,255,255,0.78);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin: 2px 8px;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .sidebar-nav a:hover {
+      background: rgba(255,255,255,0.10);
+      color: #ffffff;
+    }
+
+    .sidebar-nav a.active {
+      background: rgba(255,255,255,0.18);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .sidebar-nav a .nav-icon {
+      font-size: 1.05rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-bottom {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .sidebar-bottom .user-name {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.65);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .sidebar-bottom a.logout {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,0.75);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .sidebar-bottom a.logout:hover { color: #ff8080; }
+
+    /* ═══════════════════ MAIN WRAPPER ═══════════════════ */
+    .main-wrapper {
+      margin-left: 220px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      height: 60px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .topbar h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a3a5c;
+    }
+
+    .topbar .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #eef3f8;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      color: #1a3a5c;
+      font-weight: 600;
+    }
+
+    .topbar .user-badge .avatar {
+      width: 28px;
+      height: 28px;
+      background: #1a3a5c;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    /* Page Content */
+    .page-content {
+      flex: 1;
+      padding: 28px;
+    }
+
+    /* ═══════════════════ UTILITIES ═══════════════════ */
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      padding: 20px 24px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: none;
+      font-family: inherit;
+      font-size: 0.87rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary   { background: #1a3a5c; color: #fff; }
+    .btn-success   { background: #18794e; color: #fff; }
+    .btn-danger    { background: #c0392b; color: #fff; }
+    .btn-purple    { background: #6f42c1; color: #fff; }
+    .btn-secondary { background: #e2e8f0; color: #2d3748; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📊</span>
+      <span class="brand-text">Portal de Cotas</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      {% set current = request.endpoint %}
+      <a href="/painel" class="{{ 'active' if current == 'painel' else '' }}">
+        <span class="nav-icon">📊</span>
+        Painel
+      </a>
+      <a href="/relatorio" class="{{ 'active' if current == 'relatorio' else '' }}">
+        <span class="nav-icon">📋</span>
+        Relatório
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <span class="user-name">👤 Altair Richard</span>
+      <a href="/logout" class="logout">
+        <span>🚪</span> Sair
+      </a>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════ MAIN WRAPPER ═══════════════════ -->
+  <div class="main-wrapper">
+
+    <header class="topbar">
+      <h2>{% block page_title %}Portal de Cotas{% endblock %}</h2>
+      <div class="user-badge">
+        <div class="avatar">AR</div>
+        Altair Richard
+      </div>
+    </header>
+
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
